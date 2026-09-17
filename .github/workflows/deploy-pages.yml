@@ -31,12 +31,6 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Import replacement video
-        run: |
-          mkdir -p app/public
-          curl -L --fail --retry 2 'https://sdmntprukwest.oaiusercontent.com/files/00000000-38e0-8243-a7e5-9bf905a3fe6a/raw?se=2026-09-18T00%3A00%3A37Z&sp=r&sv=2026-02-06&sr=b&scid=b7b6640a-7b03-5667-b161-3ee455e2cdb4&skoid=a3a8eefe-d4bd-4909-ab1d-2a75a2302fac&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-17T18%3A17%3A02Z&ske=2026-09-18T18%3A17%3A02Z&sks=b&skv=2026-02-06&sig=ZfS8lxL%2BHAh6kMs9frqY7PXiOGxmPtijeIPWR1fDKAM%3D' -o app/public/mainframe-video.mp4
-          test "$(stat -c%s app/public/mainframe-video.mp4)" -eq 505262
-
       - name: Build
         run: npm run build
 
