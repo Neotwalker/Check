@@ -56,7 +56,16 @@ jobs:
     needs: deploy
     steps:
       - name: Setup browser diagnostics
-        run: npm install --no-save playwright-core
+        run: |
+          npm install --no-save playwright-core
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+
+      - name: Extract video poster
+        run: |
+          VIDEO_URL="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260530_042513_df96a13b-6155-4f6e-8b93-c9dee66fba08.mp4"
+          curl -L --fail "$VIDEO_URL" -o aria.mp4
+          ffmpeg -y -ss 0.04 -i aria.mp4 -frames:v 1 -q:v 3 poster.jpg
 
       - name: Inspect published page
         run: |
@@ -130,4 +139,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: mainframe-visual-check
-          path: mainframe.png
+          path: |
+            mainframe.png
+            poster.jpg
