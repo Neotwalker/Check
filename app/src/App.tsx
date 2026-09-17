@@ -1,7 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
 
-const VIDEO_URL =
-  'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260530_042513_df96a13b-6155-4f6e-8b93-c9dee66fba08.mp4'
+const VIDEO_URL = '/Check/mainframe-video.mp4'
 
 const TYPEWRITER_TEXT =
   'Glad you stopped in. Good taste tends to find us. Now, what are we building?'

@@ -31,6 +31,12 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Import replacement video
+        run: |
+          mkdir -p app/public
+          curl -L --fail --retry 2 'https://sdmntprukwest.oaiusercontent.com/files/00000000-38e0-8243-a7e5-9bf905a3fe6a/raw?se=2026-09-18T00%3A00%3A37Z&sp=r&sv=2026-02-06&sr=b&scid=b7b6640a-7b03-5667-b161-3ee455e2cdb4&skoid=a3a8eefe-d4bd-4909-ab1d-2a75a2302fac&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-17T18%3A17%3A02Z&ske=2026-09-18T18%3A17%3A02Z&sks=b&skv=2026-02-06&sig=ZfS8lxL%2BHAh6kMs9frqY7PXiOGxmPtijeIPWR1fDKAM%3D' -o app/public/mainframe-video.mp4
+          test "$(stat -c%s app/public/mainframe-video.mp4)" -eq 505262
+
       - name: Build
         run: npm run build
 
@@ -40,9 +46,10 @@ jobs:
           rm -f aria-poster.jpg
           cp dist/index.html index.html
           cp -R dist/assets ./assets
+          cp dist/mainframe-video.mp4 ./mainframe-video.mp4
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A index.html assets
+          git add -A index.html assets app/public/mainframe-video.mp4 mainframe-video.mp4
           if ! git diff --cached --quiet; then
             git commit -m "chore: sync Pages build [skip ci]"
             git push origin HEAD:main
@@ -99,10 +106,19 @@ jobs:
             width: video.videoWidth,
             height: video.videoHeight,
             error: video.error?.code ?? null,
+            duration: video.duration,
+            src: video.currentSrc,
           }))
 
-          if (before.readyState < 2 || before.width === 0 || before.height === 0 || before.error) {
-            throw new Error(`Video did not load correctly: ${JSON.stringify(before)}`)
+          if (
+            before.readyState < 2 ||
+            before.width !== 910 ||
+            before.height !== 512 ||
+            Math.abs(before.duration - 1) > 0.05 ||
+            !before.src.includes('mainframe-video.mp4') ||
+            before.error
+          ) {
+            throw new Error(`Replacement video did not load correctly: ${JSON.stringify(before)}`)
           }
 
           await page.mouse.move(100, 450)
