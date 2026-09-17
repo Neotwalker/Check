@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 
 const VIDEO_URL =
   'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260530_042513_df96a13b-6155-4f6e-8b93-c9dee66fba08.mp4'
@@ -159,12 +159,12 @@ function Navbar() {
 
         <nav className="hidden items-center text-[23px] text-black md:flex" aria-label="Primary navigation">
           {navItems.map((item, index) => (
-            <span key={item}>
+            <Fragment key={item}>
               <a href={`#${item.toLowerCase()}`} className="transition-opacity hover:opacity-60">
                 {item}
               </a>
-              {index < navItems.length - 1 ? ', ' : ''}
-            </span>
+              {index < navItems.length - 1 && <span aria-hidden="true">,&nbsp;</span>}
+            </Fragment>
           ))}
         </nav>
 
