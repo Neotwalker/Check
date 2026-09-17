@@ -50,3 +50,21 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  visual-check:
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+      - name: Capture published page
+        run: |
+          google-chrome --headless=new --no-sandbox --disable-gpu \
+            --hide-scrollbars --window-size=1440,900 \
+            --virtual-time-budget=5000 \
+            --screenshot=mainframe.png \
+            https://neotwalker.github.io/Check/
+
+      - name: Upload visual check
+        uses: actions/upload-artifact@v4
+        with:
+          name: mainframe-visual-check
+          path: mainframe.png
