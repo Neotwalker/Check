@@ -173,7 +173,7 @@ function BackgroundVideo() {
       ref={videoRef}
       className="fixed inset-0 z-0 h-full w-full object-cover object-[70%_center]"
       src={VIDEO_URL}
-      poster={`${import.meta.env.BASE_URL}aria-poster.jpg`}
+      poster="/Check/aria-poster.jpg"
       muted
       playsInline
       preload="auto"
