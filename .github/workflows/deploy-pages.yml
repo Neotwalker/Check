@@ -42,7 +42,7 @@ jobs:
           cp -R dist/assets ./assets
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A index.html assets aria-poster.jpg
+          git add -A index.html assets
           if ! git diff --cached --quiet; then
             git commit -m "chore: sync Pages build [skip ci]"
             git push origin HEAD:main
