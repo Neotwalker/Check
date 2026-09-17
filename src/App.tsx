@@ -71,7 +71,11 @@ function BackgroundVideo() {
     }
 
     const handleLoadedMetadata = () => {
-      targetTimeRef.current = clampTime(video.currentTime)
+      // Force the browser to decode and paint an initial frame without autoplay.
+      // Seeking a few milliseconds in is enough to avoid an empty video surface
+      // while preserving the mouse-controlled scrub behavior.
+      targetTimeRef.current = clampTime(Math.min(0.04, video.duration))
+      seekToTarget()
     }
 
     const handleMouseMove = (event: MouseEvent) => {

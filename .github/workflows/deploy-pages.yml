@@ -55,13 +55,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: deploy
     steps:
-      - name: Check background video
-        run: |
-          VIDEO_URL="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260530_042513_df96a13b-6155-4f6e-8b93-c9dee66fba08.mp4"
-          curl -L --fail --retry 2 "$VIDEO_URL" -o aria.mp4
-          ffprobe -v error -show_format -show_streams aria.mp4 > video-info.txt
-          ffmpeg -y -ss 0 -i aria.mp4 -frames:v 1 video-first-frame.jpg
-
       - name: Capture published page
         run: |
           google-chrome --headless=new --no-sandbox --disable-gpu \
@@ -74,7 +67,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: mainframe-visual-check
-          path: |
-            mainframe.png
-            video-first-frame.jpg
-            video-info.txt
+          path: mainframe.png
