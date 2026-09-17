@@ -7,6 +7,7 @@ const TYPEWRITER_TEXT =
   'Glad you stopped in. Good taste tends to find us. Now, what are we building?'
 
 const SENSITIVITY = 0.8
+const INITIAL_TIME = 2.285
 
 function useTypewriter(text: string, speed = 38, startDelay = 600) {
   const [displayed, setDisplayed] = useState('')
@@ -47,8 +48,10 @@ function useTypewriter(text: string, speed = 38, startDelay = 600) {
 function BackgroundVideo() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const prevXRef = useRef<number | null>(null)
-  const targetTimeRef = useRef(0)
+  const prevTouchXRef = useRef<number | null>(null)
+  const targetTimeRef = useRef(INITIAL_TIME)
   const seekInFlightRef = useRef(false)
+  const touchActivatedRef = useRef(false)
 
   useEffect(() => {
     const video = videoRef.current
@@ -70,12 +73,24 @@ function BackgroundVideo() {
       video.currentTime = nextTime
     }
 
-    const handleLoadedMetadata = () => {
-      // Force the browser to decode and paint an initial frame without autoplay.
-      // Seeking a few milliseconds in is enough to avoid an empty video surface
-      // while preserving the mouse-controlled scrub behavior.
-      targetTimeRef.current = clampTime(Math.min(0.04, video.duration))
+    const applyHorizontalDelta = (delta: number) => {
+      if (!Number.isFinite(video.duration) || video.duration <= 0) return
+
+      const offset = (delta / window.innerWidth) * SENSITIVITY * video.duration
+      targetTimeRef.current = clampTime(targetTimeRef.current + offset)
       seekToTarget()
+    }
+
+    const handleLoadedMetadata = () => {
+      targetTimeRef.current = clampTime(INITIAL_TIME)
+
+      // Desktop browsers can safely paint a paused seeked frame immediately.
+      // On iOS Safari we keep the poster visible until the first real touch,
+      // then activate the inline video from that user gesture.
+      const isCoarsePointer = window.matchMedia('(hover: none), (pointer: coarse)').matches
+      if (!isCoarsePointer) {
+        seekToTarget()
+      }
     }
 
     const handleMouseMove = (event: MouseEvent) => {
@@ -83,14 +98,47 @@ function BackgroundVideo() {
       const prevX = prevXRef.current
       prevXRef.current = currentX
 
-      if (prevX === null || !Number.isFinite(video.duration) || video.duration <= 0) {
-        return
-      }
+      if (prevX === null) return
+      applyHorizontalDelta(currentX - prevX)
+    }
 
-      const delta = currentX - prevX
-      const offset = (delta / window.innerWidth) * SENSITIVITY * video.duration
-      targetTimeRef.current = clampTime(targetTimeRef.current + offset)
-      seekToTarget()
+    const activateVideoForTouch = () => {
+      if (touchActivatedRef.current) return
+      touchActivatedRef.current = true
+
+      const playPromise = video.play()
+      if (playPromise) {
+        playPromise
+          .then(() => {
+            video.pause()
+            seekToTarget()
+          })
+          .catch(() => {
+            // If Safari refuses play(), the poster remains visible and the
+            // following seek attempts can still succeed after interaction.
+            seekToTarget()
+          })
+      }
+    }
+
+    const handleTouchStart = (event: TouchEvent) => {
+      prevTouchXRef.current = event.touches[0]?.clientX ?? null
+      activateVideoForTouch()
+    }
+
+    const handleTouchMove = (event: TouchEvent) => {
+      const currentX = event.touches[0]?.clientX
+      if (currentX === undefined) return
+
+      const prevX = prevTouchXRef.current
+      prevTouchXRef.current = currentX
+
+      if (prevX === null) return
+      applyHorizontalDelta(currentX - prevX)
+    }
+
+    const handleTouchEnd = () => {
+      prevTouchXRef.current = null
     }
 
     const handleSeeked = () => {
@@ -104,11 +152,19 @@ function BackgroundVideo() {
     video.addEventListener('loadedmetadata', handleLoadedMetadata)
     video.addEventListener('seeked', handleSeeked)
     window.addEventListener('mousemove', handleMouseMove, { passive: true })
+    window.addEventListener('touchstart', handleTouchStart, { passive: true })
+    window.addEventListener('touchmove', handleTouchMove, { passive: true })
+    window.addEventListener('touchend', handleTouchEnd, { passive: true })
+    window.addEventListener('touchcancel', handleTouchEnd, { passive: true })
 
     return () => {
       video.removeEventListener('loadedmetadata', handleLoadedMetadata)
       video.removeEventListener('seeked', handleSeeked)
       window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('touchstart', handleTouchStart)
+      window.removeEventListener('touchmove', handleTouchMove)
+      window.removeEventListener('touchend', handleTouchEnd)
+      window.removeEventListener('touchcancel', handleTouchEnd)
     }
   }, [])
 
@@ -117,6 +173,7 @@ function BackgroundVideo() {
       ref={videoRef}
       className="fixed inset-0 z-0 h-full w-full object-cover object-[70%_center]"
       src={VIDEO_URL}
+      poster={`${import.meta.env.BASE_URL}aria-poster.jpg`}
       muted
       playsInline
       preload="auto"
