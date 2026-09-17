@@ -23,7 +23,7 @@ body,
 
 body {
   font-family: var(--font-body);
-  overflow: hidden;
+  overflow-x: hidden;
   background: #f2f2f2;
 }
 

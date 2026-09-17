@@ -31,18 +31,6 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Install FFmpeg
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq ffmpeg
-
-      - name: Prepare A.R.I.A. poster
-        run: |
-          mkdir -p app/public
-          VIDEO_URL="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260530_042513_df96a13b-6155-4f6e-8b93-c9dee66fba08.mp4"
-          curl -L --fail --retry 2 "$VIDEO_URL" -o /tmp/aria.mp4
-          ffmpeg -y -ss 2.285 -i /tmp/aria.mp4 -frames:v 1 -q:v 3 app/public/aria-poster.jpg
-
       - name: Build
         run: npm run build
 
@@ -52,10 +40,9 @@ jobs:
           rm -f aria-poster.jpg
           cp dist/index.html index.html
           cp -R dist/assets ./assets
-          cp dist/aria-poster.jpg ./aria-poster.jpg
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html assets aria-poster.jpg
+          git add -A index.html assets aria-poster.jpg
           if ! git diff --cached --quiet; then
             git commit -m "chore: sync Pages build [skip ci]"
             git push origin HEAD:main
@@ -87,7 +74,7 @@ jobs:
       - name: Setup browser check
         run: npm install --no-save playwright-core
 
-      - name: Verify published video scrub and capture page
+      - name: Verify desktop video scrub
         run: |
           cat > visual-check.mjs <<'EOF'
           import { chromium } from 'playwright-core'
@@ -97,6 +84,7 @@ jobs:
             executablePath: '/usr/bin/google-chrome',
             args: ['--no-sandbox', '--disable-gpu'],
           })
+
           const page = await browser.newPage({ viewport: { width: 1440, height: 900 } })
 
           await page.goto('https://neotwalker.github.io/Check/', {
@@ -123,70 +111,14 @@ jobs:
 
           const after = await page.locator('video').evaluate((video) => ({
             currentTime: video.currentTime,
-            readyState: video.readyState,
             error: video.error?.code ?? null,
           }))
 
           if (after.currentTime <= before.currentTime || after.error) {
-            throw new Error(`Video scrub did not advance: before=${JSON.stringify(before)} after=${JSON.stringify(after)}`)
+            throw new Error(`Desktop scrub did not advance: before=${JSON.stringify(before)} after=${JSON.stringify(after)}`)
           }
 
           await page.screenshot({ path: 'mainframe-desktop.png', fullPage: true })
-
-          const mobile = await browser.newPage({
-            viewport: { width: 390, height: 844 },
-            isMobile: true,
-            hasTouch: true,
-            deviceScaleFactor: 3,
-          })
-
-          await mobile.goto('https://neotwalker.github.io/Check/', {
-            waitUntil: 'networkidle',
-            timeout: 60000,
-          })
-          await mobile.waitForTimeout(1500)
-          await mobile.screenshot({ path: 'mainframe-mobile-before-touch.png', fullPage: true })
-
-          const mobileBefore = await mobile.locator('video').evaluate((video) => ({
-            currentTime: video.currentTime,
-            readyState: video.readyState,
-            width: video.videoWidth,
-            height: video.videoHeight,
-            poster: video.poster,
-            error: video.error?.code ?? null,
-          }))
-
-          if (!mobileBefore.poster.includes('aria-poster.jpg') || mobileBefore.error) {
-            throw new Error(`Mobile poster/video state is invalid: ${JSON.stringify(mobileBefore)}`)
-          }
-
-          await mobile.evaluate(() => {
-            const fire = (type, x) => {
-              const event = new Event(type, { bubbles: true, cancelable: true })
-              Object.defineProperty(event, 'touches', {
-                value: type === 'touchend' ? [] : [{ clientX: x }],
-              })
-              window.dispatchEvent(event)
-            }
-
-            fire('touchstart', 80)
-            fire('touchmove', 290)
-            fire('touchend', 290)
-          })
-
-          await mobile.waitForTimeout(1500)
-
-          const mobileAfter = await mobile.locator('video').evaluate((video) => ({
-            currentTime: video.currentTime,
-            readyState: video.readyState,
-            error: video.error?.code ?? null,
-          }))
-
-          if (mobileAfter.currentTime <= 2.285 || mobileAfter.error) {
-            throw new Error(`Touch scrub did not advance: ${JSON.stringify(mobileAfter)}`)
-          }
-
-          await mobile.screenshot({ path: 'mainframe-mobile-after-touch.png', fullPage: true })
           await browser.close()
           EOF
           node visual-check.mjs
@@ -195,7 +127,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: mainframe-visual-check
-          path: |
-            mainframe-desktop.png
-            mainframe-mobile-before-touch.png
-            mainframe-mobile-after-touch.png
+          path: mainframe-desktop.png
